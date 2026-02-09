@@ -210,7 +210,7 @@ This is a research project under active development. Contributions, suggestions,
 ## 🙏 Acknowledgments
 
 - Intel RealSense SDK and community
-- [University of South Florida/Robotics Department]
+- University of South Florida/Robotics Department
 - Research mentor Chance J. Hamilton
 
 ---
@@ -218,7 +218,7 @@ This is a research project under active development. Contributions, suggestions,
 ## 📧 Contact
 
 **Aaron Fraze**  
-[aaron.fraze2@gmail.com]  
+aaron.fraze2@gmail.com  
 GitHub: [@fraze-dev](https://github.com/fraze-dev)
 
 **Project Repository:** [github.com/fraze-dev/Overhead-Perception-System](https://github.com/fraze-dev/Overhead-Perception-System)
