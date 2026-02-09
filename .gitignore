@@ -7,3 +7,4 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+docs/Week4_ActionPlan.md
