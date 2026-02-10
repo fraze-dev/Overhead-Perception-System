@@ -4,7 +4,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![RealSense SDK](https://img.shields.io/badge/RealSense-2.57.5-orange.svg)](https://github.com/IntelRealSense/librealsense)
 
-A real-time overhead perception system that tracks robots, objects, and obstacles in world coordinates using an Intel RealSense depth camera. Developed as a research project at [Your University].
+A real-time overhead perception system that tracks robots, objects, and obstacles in world coordinates using an Intel RealSense depth camera. Developed as a research project at University of South Florida.
 
 **Researcher:** Aaron Fraze  
 **Mentor:** Chance J. Hamilton  
@@ -198,12 +198,6 @@ This is a research project under active development. Contributions, suggestions,
 ### Weekly Meetings
 - **When:** Tuesdays, 2:00-3:00 PM
 - **Focus:** Progress review, technical discussions, planning
-
----
-
-## 📝 License
-
-[Add license information here - MIT, Apache 2.0, etc.]
 
 ---
 
