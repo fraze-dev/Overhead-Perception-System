@@ -1,0 +1,246 @@
+{
+  "timestamp": "2026-02-11T16:00:32.380041",
+  "camera_height_cm": 220.0,
+  "camera_position_world": [
+    0.0,
+    0.0,
+    2.2
+  ],
+  "rotation_matrix": [
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      -1.0
+    ]
+  ],
+  "translation_vector": [
+    [
+      0.0
+    ],
+    [
+      0.0
+    ],
+    [
+      2.2
+    ]
+  ],
+  "transformation_matrix": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      -1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      -1.0,
+      2.2
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "calibration_error_cm": 5.17727841726774,
+  "calibration_points": [
+    {
+      "label": "top-left",
+      "pixel_coords": [
+        148,
+        82
+      ],
+      "depth_meters": 2.259000062942505,
+      "world_coords_true": [
+        -122.0,
+        66.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        -122.63442277908325,
+        68.87129545211792,
+        -5.9000062942504705
+      ],
+      "error_cm": 6.592185078421868
+    },
+    {
+      "label": "top-center",
+      "pixel_coords": [
+        641,
+        90
+      ],
+      "depth_meters": 2.249000072479248,
+      "world_coords_true": [
+        0.0,
+        67.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        -0.3833877621218562,
+        66.58868193626404,
+        -4.900007247924787
+      ],
+      "error_cm": 4.932163800545938
+    },
+    {
+      "label": "top-right",
+      "pixel_coords": [
+        1143,
+        83
+      ],
+      "depth_meters": 2.249000072479248,
+      "world_coords_true": [
+        120.0,
+        66.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        123.54663610458374,
+        68.31920146942139,
+        -4.900007247924787
+      ],
+      "error_cm": 6.47822461356649
+    },
+    {
+      "label": "center-left",
+      "pixel_coords": [
+        352,
+        361
+      ],
+      "depth_meters": 2.249000072479248,
+      "world_coords_true": [
+        -70.0,
+        0.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        -71.72955870628357,
+        -0.4071371164172888,
+        -4.900007247924787
+      ],
+      "error_cm": 5.212216896845461
+    },
+    {
+      "label": "center-center",
+      "pixel_coords": [
+        641,
+        360
+      ],
+      "depth_meters": 2.200000047683716,
+      "world_coords_true": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        -0.3750347066670656,
+        -0.15643577789887786,
+        -4.768371564267682e-06
+      ],
+      "error_cm": 0.40635352076045356
+    },
+    {
+      "label": "center-right",
+      "pixel_coords": [
+        945,
+        363
+      ],
+      "depth_meters": 2.239000082015991,
+      "world_coords_true": [
+        73.0,
+        0.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        74.33387041091919,
+        -0.8975624106824398,
+        -3.9000082015991033
+      ],
+      "error_cm": 4.218399284887108
+    },
+    {
+      "label": "bottom-left",
+      "pixel_coords": [
+        139,
+        635
+      ],
+      "depth_meters": 2.239000082015991,
+      "world_coords_true": [
+        -120.0,
+        -67.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        -123.76066446304321,
+        -67.84160733222961,
+        -3.9000082015991033
+      ],
+      "error_cm": 5.482787984027745
+    },
+    {
+      "label": "bottom-center",
+      "pixel_coords": [
+        635,
+        636
+      ],
+      "depth_meters": 2.1410000324249268,
+      "world_coords_true": [
+        0.0,
+        -67.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        -1.7750812694430351,
+        -65.10756015777588,
+        5.899996757507342
+      ],
+      "error_cm": 6.445324181774095
+    },
+    {
+      "label": "bottom-right",
+      "pixel_coords": [
+        1139,
+        629
+      ],
+      "depth_meters": 2.264000177383423,
+      "world_coords_true": [
+        121.0,
+        -67.0,
+        0.0
+      ],
+      "world_coords_predicted": [
+        123.3765721321106,
+        -67.10591912269592,
+        -6.400017738342267
+      ],
+      "error_cm": 6.827850394580497
+    }
+  ],
+  "camera_intrinsics": {
+    "width": 1280,
+    "height": 720,
+    "fx": 910.9963989257812,
+    "fy": 909.7269287109375,
+    "ppx": 642.552978515625,
+    "ppy": 359.3531188964844
+  },
+  "depth_scale": 0.0010000000474974513
+}
