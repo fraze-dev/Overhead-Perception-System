@@ -2,14 +2,18 @@
 Overhead Perception System version 1
 Author: Aaron Fraze
 Date: February 9, 2026
+"""
+"""
 Purpose: Build Overhead Camera class. Demonstrate world coordinate system transformation
 """
+import sys
 
 import pyrealsense2 as rs
 import numpy as np
 import cv2
 
-
+"""SET DESIRED RESOLUTION"""
+"""Suggested: 640x480, 848x480, 1280x720"""
 resolution_width = 1280
 resolution_height = 720
 
@@ -27,8 +31,29 @@ class OverheadPerceptor:
         self.config.enable_stream(rs.stream.depth, resolution_width, resolution_height, rs.format.z16, 30)
         self.config.enable_stream(rs.stream.color, resolution_width, resolution_height, rs.format.bgr8, 30)
 
-        # Start pipeline
-        self.profile = self.pipeline.start(self.config)
+        '''
+        Attempts to start the pipeline
+        Catch exceptions (e.g., Camera not connected, camera not initialized)
+        Exit program if unable to start the pipeline
+        '''
+        try:
+            self.profile = self.pipeline.start(self.config)
+            print("Camera initialized")
+        except RuntimeError as e:
+            if "No device connected" in str(e):
+                print("Camera not found.")
+                print("Check if camera is connected and try again.")
+                print("Closing program...")
+                sys.exit(1)
+            else:
+                print(f"Camera runtime error: {e}")
+                print("Closing program...")
+                sys.exit(1)
+        except Exception as e:
+            print(f"Camera not initialized. Error: {e}")
+            print("Closing program...")
+            sys.exit(1)
+
 
         # Get device and sensors
         self.device = self.profile.get_device()
@@ -48,7 +73,7 @@ class OverheadPerceptor:
             self.pipeline.wait_for_frames()
         print("Ready!")
 
-    def frame_getter(self):
+    def get_frame(self):
         """
         Capture and process frames.
         Returns:
@@ -56,8 +81,12 @@ class OverheadPerceptor:
         """
 
         frames = self.pipeline.wait_for_frames()
-        depth_frame = frames.get_depth_frame()
-        color_frame = frames.get_color_frame()
+
+        # Align depth to color
+        aligned_frame = self.align.process(frames)
+
+        depth_frame = aligned_frame.get_depth_frame()
+        color_frame = aligned_frame.get_color_frame()
 
         if not depth_frame or not color_frame:
             return None
@@ -125,7 +154,7 @@ class OverheadPerceptor:
 
         while True:
 
-            frames_data = self.frame_getter()
+            frames_data = self.get_frame()
             if frames_data is None:
                 continue
 
@@ -228,6 +257,7 @@ if __name__=="__main__":
     print("Overhead Perception System")
     print("="*60)
 
+    print("Initializing camera...")
     perceptor = OverheadPerceptor()
 
     try:
