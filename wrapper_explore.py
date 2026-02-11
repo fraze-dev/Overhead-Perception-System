@@ -9,5 +9,6 @@ Purpose: Search through documentation of available Classes, methods and function
 #help(rs)
 #help(rs.pipeline)
 #help(rs.depth_frame)
-help(rs.video_frame)
+#help(rs.video_frame)
 #dir(rs)
+help(rs.rs2_deproject_pixel_to_point)
