@@ -1,0 +1,34 @@
+{
+  "orange_ball": {
+    "lower": [
+      2,
+      1,
+      82
+    ],
+    "upper": [
+      7,
+      255,
+      239
+    ],
+    "min_area": 340,
+    "max_area": 700,
+    "min_circularity": 0.6,
+    "max_height_above_floor_cm": 10.0
+  },
+  "hambot_green": {
+    "lower": [
+      60,
+      51,
+      5
+    ],
+    "upper": [
+      95,
+      215,
+      113
+    ],
+    "min_area": 1202,
+    "max_area": 9528,
+    "min_circularity": 0.0,
+    "max_height_above_floor_cm": 30.0
+  }
+}
