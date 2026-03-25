@@ -70,6 +70,7 @@ import socket
 import sys
 import time
 import threading
+from robot_systems.robot import HamBot
 
 
 # ── Connection settings ───────────────────────────────────────────────────────
@@ -157,6 +158,7 @@ class WorldStateReceiver:
         finally:
             self._running = False
             self._print_stats()
+            bot.stop_motors()
 
     def stop(self):
         """Signal the receiver to stop after the current message."""
@@ -298,6 +300,15 @@ class HambotBehavior:
 
         TODO: Replace the placeholder logic below with your behavior.
         """
+        # Just drive in circle for testing. Radius 50 cm
+        # Hambot dimensions: wheelbase 184mm, wheels 90 mm.
+        # @50cm radius> inner wheel radius = 40.8cm, outer wheel radius = 59.2cm
+        # inner wheel circle=256.35cm, outer wheel circle=371.97cm
+        # speed ratio = 1.45
+        # set wheel speed once for continuous motion until program is stopped
+        if self.frame_count < 1:
+            bot.set_left_motor_speed(20)
+            bot.set_right_motor_speed(29)
         self.frame_count += 1
 
         # ── Extract the data you need ─────────────────────────────────────────
@@ -411,4 +422,5 @@ if __name__ == '__main__':
         port      = args.port,
         behavior  = behavior,
     )
+    bot = HamBot(lidar_enabled=False, camera_enabled=False)
     receiver.run()

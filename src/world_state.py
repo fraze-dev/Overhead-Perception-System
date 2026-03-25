@@ -40,11 +40,33 @@ Design decisions:
     - to_dict() output is the exact JSON message sent over TCP
 """
 
+import json
 import time
 from collections import deque
 from dataclasses import dataclass, field, asdict
 
 import numpy as np
+
+
+def _numpy_clean(obj):
+    """
+    Recursively convert numpy scalar types to native Python types.
+    Called by to_dict() before JSON serialization.
+    json.dumps cannot handle np.float32, np.int64, etc.
+    """
+    if isinstance(obj, dict):
+        return {k: _numpy_clean(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_numpy_clean(v) for v in obj]
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
 
 from camera import RealSenseCamera
 from aruco_detector import ArucoDetector
@@ -153,7 +175,7 @@ class FrameState:
         Convert to a JSON-serializable dict.
         This is the exact payload sent over TCP.
         """
-        return asdict(self)
+        return _numpy_clean(asdict(self))
 
 
 # ── WorldState ────────────────────────────────────────────────────────────────
@@ -210,6 +232,10 @@ class WorldState:
         self._fps_history: deque = deque(maxlen=30)
         self._last_time:   float = time.time()
 
+        # ── Last raw detector outputs (for draw_world_state overlays) ─────────
+        self._last_aruco_detections: list = []
+        self._last_hsv_detections:   dict = {'ball': None, 'robot': None}
+
         print(f"[WorldState] Initialized")
         print(f"  Robot marker ID : {robot_marker_id}")
         print(f"  Goal position   : {goal_position} cm")
@@ -247,6 +273,11 @@ class WorldState:
         # ── Run detectors ─────────────────────────────────────────────────────
         aruco_detections = self.aruco.detect(frame_data)
         hsv_detections   = self.hsv.detect(frame_data)
+
+        # Store raw detections so draw_world_state() can access them for
+        # overlays (marker outline, heading arrow, ball circle)
+        self._last_aruco_detections = aruco_detections
+        self._last_hsv_detections   = hsv_detections
 
         # ── Build robot state ─────────────────────────────────────────────────
         robot_state = self._build_robot_state(aruco_detections, hsv_detections)
@@ -437,8 +468,17 @@ class WorldState:
         """
         Draw the full world state onto a camera image.
 
-        Shows robot position/heading, ball position/velocity vector,
-        and goal marker. Useful as the main debug visualisation window.
+        Overlays (drawn on the image itself):
+            - ArUco marker outline + corner dots + heading arrow  (cyan arrow)
+            - Ball circle from HSV detection                      (orange circle)
+            - Velocity vector arrow on ball                       (yellow arrow)
+            - Goal marker cross                                   (yellow)
+
+        HUD text (top-left corner):
+            - Robot position, heading, source, staleness warning
+            - Ball position, velocity, confidence
+            - Goal position
+            - FPS and frame counter
 
         Args:
             image: BGR image from frame_data['color_image']
@@ -449,14 +489,107 @@ class WorldState:
         """
         import cv2
         vis = image.copy()
-        h, w = vis.shape[:2]
 
-        # ── HUD helper ────────────────────────────────────────────────────────
+        # ── ArUco overlay ──────────────────────────────────────────────────────
+        # Draw all detected markers regardless of which one is the robot.
+        # This shows exactly what the ArUco detector sees.
+        for det in self._last_aruco_detections:
+            corners   = det['corners'].astype(int)
+            cx, cy    = det['center_pixel']
+            conf      = det['confidence']
+            heading   = det['heading_deg']
+            marker_id = det['id']
+
+            # Colour by confidence: green=high, yellow=medium, red=low
+            if conf >= 0.7:
+                aruco_color = (0, 220, 0)
+            elif conf >= 0.4:
+                aruco_color = (0, 200, 200)
+            else:
+                aruco_color = (0, 60, 220)
+
+            # Marker outline
+            cv2.polylines(vis, [corners], True, aruco_color, 2)
+
+            # Corner dots
+            for corner in corners:
+                cv2.circle(vis, tuple(corner), 4, (0, 0, 255), -1)
+
+            # Centre dot
+            cv2.circle(vis, (cx, cy), 5, (255, 255, 255), -1)
+
+            # Heading arrow (cyan) — same math as aruco_detector.draw_detections()
+            arrow_len = 50
+            angle_rad = np.radians(heading)
+            ax = int(cx + arrow_len * np.cos(angle_rad))
+            ay = int(cy - arrow_len * np.sin(angle_rad))   # Y flipped in pixel space
+            cv2.arrowedLine(vis, (cx, cy), (ax, ay), (0, 255, 255), 2, tipLength=0.3)
+
+            # ID + heading label
+            cv2.putText(vis, f"ID:{marker_id}  {heading:.0f}deg",
+                        (cx - 30, cy - 48),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, aruco_color, 2)
+
+            # Confidence label
+            cv2.putText(vis, f"conf={conf:.2f}",
+                        (cx - 25, cy - 28),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.48, aruco_color, 1)
+
+            # World position
+            if det['position_world']:
+                wx, wy, _ = det['position_world']
+                cv2.putText(vis, f"({wx:.0f}, {wy:.0f}) cm",
+                            (cx - 50, cy + 55),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.48, (200, 200, 0), 1)
+
+        # ── HSV ball overlay ───────────────────────────────────────────────────
+        hsv_ball = self._last_hsv_detections.get('ball')
+        if hsv_ball is not None:
+            bx, by   = hsv_ball['circle_center']
+            radius   = hsv_ball['radius']
+            bconf    = hsv_ball['confidence']
+
+            # Orange circle around ball
+            cv2.circle(vis, (bx, by), radius,     (0, 140, 255), 2)
+            cv2.circle(vis, (bx, by), 4,           (0, 140, 255), -1)
+
+            # Ball confidence label
+            cv2.putText(vis, f"ball conf={bconf:.2f}",
+                        (bx - 40, by - radius - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 140, 255), 1)
+
+            # Velocity arrow if ball is moving
+            b = state.ball
+            if b.detected and b.speed > 1.0:
+                # Scale arrow so 50 cm/s = 60 pixels long
+                scale   = 60.0 / 50.0
+                vx_px   = int(b.vx * scale)
+                vy_px   = int(-b.vy * scale)   # Y flipped
+                tip_x   = bx + vx_px
+                tip_y   = by + vy_px
+                cv2.arrowedLine(vis, (bx, by), (tip_x, tip_y),
+                                (0, 255, 255), 2, tipLength=0.4)
+
+        # ── HSV robot overlay (when ArUco fallback active) ─────────────────────
+        hsv_robot = self._last_hsv_detections.get('robot')
+        if hsv_robot is not None and state.robot.source == 'hsv':
+            rx, ry  = hsv_robot['circle_center']
+            rradius = hsv_robot['radius']
+            cv2.circle(vis, (rx, ry), rradius, (0, 200, 255), 2)
+            cv2.putText(vis, "HSV fallback",
+                        (rx - 40, ry - rradius - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 200, 255), 1)
+
+        # ── Goal marker ────────────────────────────────────────────────────────
+        # Goal is in world coords -- we can't project back to pixels without
+        # a full world->pixel transform, so we show it in the HUD only.
+        # (Add pixel projection in a future update once arena coords are fixed.)
+
+        # ── HUD text (top-left) ────────────────────────────────────────────────
         def hud(text, row, color=(220, 220, 220)):
             cv2.putText(vis, text, (10, 25 + row * 22),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 1)
 
-        # ── Robot ─────────────────────────────────────────────────────────────
         r = state.robot
         if r.detected:
             src_color = {
@@ -466,39 +599,30 @@ class WorldState:
             }.get(r.source, (200, 200, 200))
 
             hud(f"ROBOT [{r.source.upper()}]  ({r.x:.1f}, {r.y:.1f}) cm", 0, src_color)
-            hud(f"  heading: {r.heading_deg:.1f}°  "
+            hud(f"  heading: {r.heading_deg:.1f}deg  "
                 f"{'live' if r.heading_current else f'held {r.heading_age}fr'}",
                 1, src_color)
             hud(f"  conf: {r.confidence:.2f}", 2, src_color)
-
-            # Heading staleness warning
             if not r.heading_current and r.heading_age > HEADING_STALE_FRAMES:
-                hud(f"  ⚠ HEADING STALE ({r.heading_age} frames)", 3, (0, 80, 255))
+                hud(f"  WARNING: HEADING STALE ({r.heading_age} frames)", 3, (0, 80, 255))
         else:
             hud("ROBOT: LOST", 0, (0, 0, 255))
-            hud(f"  last heading: {r.heading_deg:.1f}° ({r.heading_age} frames ago)",
+            hud(f"  last heading: {r.heading_deg:.1f}deg ({r.heading_age} frames ago)",
                 1, (100, 100, 100))
 
-        # ── Ball ──────────────────────────────────────────────────────────────
         b = state.ball
         if b.detected:
-            hud(f"BALL  ({b.x:.1f}, {b.y:.1f}) cm", 4, (0, 165, 255))
-            hud(f"  vel: ({b.vx:.1f}, {b.vy:.1f}) cm/s  speed={b.speed:.1f}", 5, (0, 165, 255))
-            hud(f"  conf: {b.confidence:.2f}", 6, (0, 165, 255))
+            hud(f"BALL  ({b.x:.1f}, {b.y:.1f}) cm", 4, (0, 140, 255))
+            hud(f"  vel: ({b.vx:.1f}, {b.vy:.1f}) cm/s  speed={b.speed:.1f}", 5, (0, 140, 255))
+            hud(f"  conf: {b.confidence:.2f}", 6, (0, 140, 255))
         else:
             hud("BALL: not detected", 4, (100, 100, 100))
 
-        # ── Goal ──────────────────────────────────────────────────────────────
         g = state.goal
-        hud(f"GOAL  ({g.x:.1f}, {g.y:.1f}) cm", 7, (255, 255, 100))
-
-        # ── Frame metadata ────────────────────────────────────────────────────
+        hud(f"GOAL  ({g.x:.1f}, {g.y:.1f}) cm", 7, (220, 220, 80))
         hud(f"FPS: {state.fps:.1f}  frame: {state.frame_id}", 8, (150, 150, 150))
 
         return vis
-
-    # ── Diagnostic print ──────────────────────────────────────────────────────
-
     def print_state(self, state: FrameState):
         """
         Print a concise one-line state summary to console.
