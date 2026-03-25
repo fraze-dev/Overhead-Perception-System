@@ -6,8 +6,8 @@
 
 A real-time overhead perception system that tracks robots, objects, and obstacles in world coordinates using an Intel RealSense depth camera. Developed as a research project at University of South Florida.
 
-**Researcher:** Aaron Fraze  
-**Mentor:** Chance J. Hamilton  
+**Researcher:** Aaron Fraze
+**Mentor:** Chance J. Hamilton
 **Semester:** Spring 2026
 
 ---
@@ -16,12 +16,12 @@ A real-time overhead perception system that tracks robots, objects, and obstacle
 
 This system uses an overhead-mounted Intel RealSense D435 depth camera to create a "global coordinator" view of a robotics arena. It tracks:
 
-- **Mobile robots** (HamBot)
-- **Colored balls** (objects of interest)
+- **Mobile robots** (HamBot) — via ArUco marker (primary) or HSV color fallback
+- **Colored balls** — via HSV color segmentation
 - **Static obstacles** and walls
 - **Goal regions** or targets
 
-The perception system transforms camera observations into a consistent world coordinate frame and provides real-time world-state information for autonomous robot navigation.
+The perception system transforms camera observations into a consistent world coordinate frame and streams real-time world-state over TCP to the robot.
 
 ---
 
@@ -30,44 +30,72 @@ The perception system transforms camera observations into a consistent world coo
 ### Completed ✅
 - [x] RealSense SDK integration and camera control
 - [x] Depth and RGB stream capture with synchronization
-- [x] Custom viewer with recording capabilities
-- [x] Comprehensive depth accuracy testing suite
-  - Distance accuracy: ±1-2.5 cm at 50-250 cm
-  - Spatial uniformity analysis
-  - Repeatability testing (0.36 cm std dev)
-  - Environmental effects characterization
-- [x] Camera characterization and validation (no calibration needed!)
+- [x] World-frame coordinate transformation (calibrated)
+- [x] ArUco marker detection — robot pose + heading
+- [x] HSV color segmentation — ball detection + robot fallback
+- [x] Unified world-state estimator (ArUco primary, HSV fallback)
+- [x] Bounding box visualization overlay
+- [x] TCP server — streams world-state JSON to robot at ~30 FPS
+- [x] HamBot receiver — robot-side TCP client with behavior logic
+- [x] Detection benchmark suite with performance comparison
 
 ### In Progress 🚧
-- [x] World-frame coordinate transformation
-- [ ] Extrinsic calibration methodology
-- [ ] Object detection (color-based, depth-based)
+- [ ] Multi-object tracking with temporal filtering
+- [ ] Obstacle/wall detection
+- [ ] Robot navigation behavior (ball-pushing task)
 
 ### Planned 📅
-- [ ] Robot and obstacle detection
-- [ ] Multi-object tracking with temporal filtering
-- [ ] Real-time visualization (top-down world map)
-- [ ] Accuracy analysis across workspace
-- [ ] Communication protocol (camera → robot)
-- [ ] Robot behavior implementation using global state
 - [ ] Full system integration and demonstration
+- [ ] Accuracy analysis across full workspace
+- [ ] Final report and presentation
 
 ---
 
-## 🎯 Key Results (Week 2)
+## 🎯 Key Results
 
-Our depth accuracy testing revealed excellent camera performance:
+### Calibration (Week 4)
+| Metric | Result |
+|--------|--------|
+| Center workspace error | < 5 cm |
+| Edge workspace error | 6–7 cm |
+| Coverage area | 3.3 m² |
+| Z-axis systematic offset | −4 to −6 cm (correctable) |
 
+### Full Pipeline Performance
 | Metric | Result | Target |
 |--------|--------|--------|
-| **Accuracy (50-250cm)** | <1.1% error | <2% spec |
-| **Precision (2m)** | ±0.36 cm std dev | - |
-| **Repeatability** | 2.1 cm range over 1000 frames | - |
-| **Lighting Dependence** | Minimal (0.06 cm variation) | - |
+| End-to-end FPS (detect → TCP → robot decision) | ~28 FPS | ≥25 FPS |
 
-**Key Finding:** Camera exceeds manufacturer specifications - no calibration needed! ✅
+The full pipeline includes camera capture, ArUco + HSV detection, world-state serialization, TCP transmission, and robot-side decision making.
 
-See [depth_accuracy_results_012426.md](depth_accuracy_results_012426.md) for full analysis.
+---
+
+## 🗂️ Project Structure
+
+```
+Overhead-Perception-System/
+├── src/
+│   ├── camera.py                  # RealSense camera wrapper, world-frame transform
+│   ├── world_state.py             # Unified detector integration (ArUco + HSV)
+│   ├── world_state_server.py      # TCP server — streams state to robot
+│   ├── aruco_detector.py          # ArUco marker detection (robot primary)
+│   ├── hsv_detector.py            # HSV color segmentation (ball + robot fallback)
+│   ├── hsv_profiles.json          # Saved HSV tuning profiles
+│   ├── depth_segmenter.py         # Depth-based object segmentation
+│   ├── hambot_receiver.py         # Robot-side TCP client and behavior logic
+│   ├── detection_benchmark.py     # Performance benchmarking tool
+│   ├── overhead_perceptor_v1.py   # Early perception prototype (reference)
+│   └── archive/                   # Older exploration scripts
+├── results/
+│   └── calibration/
+│       └── calibration.json       # Camera extrinsic calibration parameters
+├── docs/
+│   ├── Project_overview.md
+│   ├── Project_timeline.md
+│   └── Calibration_Report_Final.md
+├── requirements.txt
+└── README.md
+```
 
 ---
 
@@ -93,61 +121,59 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Running Tests
+### Running the Perception Server (Overhead PC)
 
 ```bash
-# Run depth accuracy test suite
-python depth_accuracy_test_v2.py
+# Start world-state TCP server (streams to robot)
+python src/world_state_server.py
 
-# Results saved to: results/depth_accuracy/
+# Optional arguments:
+#   --host    IP to bind (default: 0.0.0.0)
+#   --port    Port number (default: 9999)
+```
+
+### Running the Robot Receiver (HamBot)
+
+```bash
+# Start receiver on the robot
+python src/hambot_receiver.py --host <overhead-pc-ip> --port 9999
+```
+
+### Running Detection Benchmarks
+
+```bash
+python src/detection_benchmark.py
+# Results saved as JSON + Markdown in src/
 ```
 
 ---
 
-## 📁 Project Structure
+## 🔌 System Architecture
 
 ```
-Overhead-Perception-System/
-├── data/
-│   ├── raw/              # Original camera data
-│   ├── processed/        # Processed datasets
-│   └── external/         # Third-party data
-├── src/
-│   ├── data/            # Data processing modules
-│   ├── models/          # Detection/tracking models
-│   └── utils/           # Helper functions
-├── tests/               # Unit tests
-├── results/             # Output figures and data
-│   ├── figures/
-│   └── depth_accuracy/  # Camera characterization results
-├── notebooks/           # Jupyter notebooks for analysis
-├── docs/                # Documentation
-│   ├── Project_overview.md
-│   ├── Project_timeline.md
-│   └── depth_accuracy_results_012426.md
-├── depth_accuracy_test_v2.py  # Camera testing script
-├── requirements.txt
-└── README.md
+┌─────────────────────────────────┐         ┌──────────────────────┐
+│         Overhead PC             │   TCP   │       HamBot         │
+│                                 │ ──────► │                      │
+│  RealSense D435                 │  JSON   │  hambot_receiver.py  │
+│       ↓                         │  ~30Hz  │                      │
+│  camera.py                      │         │  - Parse world state │
+│       ↓                         │         │  - Make decisions    │
+│  world_state.py                 │         │  - Drive motors      │
+│  (ArUco + HSV detectors)        │         └──────────────────────┘
+│       ↓                         │
+│  world_state_server.py          │
+└─────────────────────────────────┘
 ```
 
----
-
-## 📊 Timeline
-
-**16-Week Research Project (Jan 13 - May 2, 2026)**
-
-| Phase | Weeks | Status | Deliverable |
-|-------|-------|--------|-------------|
-| Hardware Setup & RealSense API | 1-2 | ✅ Complete | Camera characterization |
-| Coordinate Systems & Calibration | 3-4 | 🚧 In Progress | Calibration report |
-| Object Detection | 5-6 | 📅 Planned | Detection prototype |
-| Tracking & State Estimation | 7-8 | 📅 Planned | Live visualization |
-| Accuracy Analysis | 9-10 | 📅 Planned | Mid-semester report |
-| Communication Protocol | 11-12 | 📅 Planned | Protocol documentation |
-| Robot Behavior & Integration | 13-14 | 📅 Planned | Full system demo |
-| Analysis & Documentation | 15-16 | 📅 Planned | Final report & presentation |
-
-See [Project_timeline.md](docs/Project_timeline.md) for detailed weekly breakdown.
+**Message format:** JSON over TCP, one message per frame (~30/sec)
+```json
+{
+  "timestamp": 1234567890.123,
+  "robot": { "x": 45.2, "y": 30.1, "heading": 1.57, "heading_current": true },
+  "ball":  { "x": 80.0, "y": 60.0, "vx": 0.0, "vy": 0.0 },
+  "goal":  { "x": 110.0, "y": 0.0 }
+}
+```
 
 ---
 
@@ -156,67 +182,67 @@ See [Project_timeline.md](docs/Project_timeline.md) for detailed weekly breakdow
 - **Hardware:** Intel RealSense D435 depth camera
 - **Language:** Python 3.13
 - **Key Libraries:**
-  - `pyrealsense2` - Camera SDK
-  - `opencv-python` - Image processing
-  - `numpy` - Numerical computation
-  - `matplotlib` - Visualization
+  - `pyrealsense2` — Camera SDK
+  - `opencv-python` — Image processing, ArUco detection
+  - `numpy` — Numerical computation
+  - `matplotlib` — Visualization
+  - `scipy` — Signal processing / filtering
+- **Communication:** TCP (JSON over socket)
 - **Development:** PyCharm, Git/GitHub
 
 ---
 
-## 📈 Current Status (Week 4-5)
+## 📊 Timeline
 
-**Completed:**
-- Hardware installation and SDK integration
-- Comprehensive depth accuracy characterization
-- Custom viewer with recording functionality
-- Development environment and workflow established
+**16-Week Research Project (Jan 13 – May 2, 2026)**
 
-**Next Steps:**
-- Implement world-frame coordinate transformation
-- Design extrinsic calibration approach
-- Begin object detection exploration (color-based HSV masking)
+| Phase | Weeks | Status | Deliverable |
+|-------|-------|--------|-------------|
+| Hardware Setup & RealSense API | 1–2 | ✅ Complete | Camera characterization |
+| Coordinate Systems & Calibration | 3–4 | ✅ Complete | Calibration report |
+| Object Detection | 5–6 | ✅ Complete | Detection benchmark |
+| Tracking & State Estimation | 7–8 | ✅ Complete | World-state server + HamBot receiver |
+| Accuracy Analysis | 9–10 | 🚧 In Progress | Mid-semester report |
+| Robot Behavior & Integration | 11–13 | 📅 Planned | Full system demo |
+| Analysis & Documentation | 14–16 | 📅 Planned | Final report & presentation |
+
+See [Project_timeline.md](docs/Project_timeline.md) for detailed weekly breakdown.
 
 ---
 
 ## 📖 Documentation
 
-- **[Project Overview](docs/Project_overview.md)** - Goals, components, and expected outcomes
-- **[Project Timeline](docs/Project_timeline.md)** - Detailed 16-week schedule with milestones
-- **[Depth Accuracy Results](docs/depth_accuracy_results_012426.md)** - Complete camera characterization report
+- **[Project Overview](docs/Project_overview.md)** — Goals, components, and expected outcomes
+- **[Project Timeline](docs/Project_timeline.md)** — Detailed 16-week schedule
+- **[Calibration Report](docs/Calibration_Report_Final.md)** — World-frame calibration methodology and accuracy
 
 ---
 
-## 🤝 Contributing
+## 🤝 Project Team
 
-This is a research project under active development. Contributions, suggestions, and feedback are welcome!
-
-### Project Team
 - **Student Researcher:** Aaron Fraze ([@fraze-dev](https://github.com/fraze-dev))
 - **Mentor:** Chance J. Hamilton
-
-### Weekly Meetings
-- **When:** Tuesdays, 2:00-3:00 PM
-- **Focus:** Progress review, technical discussions, planning
+- **Institution:** University of South Florida
+- **Weekly Meetings:** Tuesdays, 2:00–3:00 PM
 
 ---
 
 ## 🙏 Acknowledgments
 
 - Intel RealSense SDK and community
-- University of South Florida/Robotics Department
+- University of South Florida Robotics Department
 - Research mentor Chance J. Hamilton
 
 ---
 
 ## 📧 Contact
 
-**Aaron Fraze**  
-aaron.fraze2@gmail.com  
+**Aaron Fraze**
+aaron.fraze2@gmail.com
 GitHub: [@fraze-dev](https://github.com/fraze-dev)
 
 **Project Repository:** [github.com/fraze-dev/Overhead-Perception-System](https://github.com/fraze-dev/Overhead-Perception-System)
 
 ---
 
-**Last Updated:** February 9, 2026
+**Last Updated:** March 25, 2026
